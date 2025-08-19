@@ -112,4 +112,7 @@ Follow these instructions to get Promptly up and running on your machine.
     ```
 ---
 
-Icon source and credits: https://thenounproject.com
+**Icon source and credits:**
+```
+thenounproject.com
+```
