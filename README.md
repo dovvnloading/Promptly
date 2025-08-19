@@ -49,7 +49,7 @@ Instead of guessing what might work, you can use Promptly to:
 ## How It Works
 
 1.  **Input:** The user enters a draft or a basic idea for a prompt in the left-hand panel.
-2.  **Generate:** Upon clicking "Generate," the `PromptWorker` sends the text to a local LLM (e.g., `qwen2.5:7b`) with a system prompt that guides it to act as a prompt engineer.
+2.  **Generate:** Upon clicking "Generate," the `PromptWorker` sends the text to a local LLM (e.g., `phi4:14b`) with a system prompt that guides it to act as a prompt engineer.
 3.  **Enhance:** The LLM returns a refined, well-structured version of the prompt, which is displayed in the right-hand panel with syntax highlighting.
 4.  **Iterate or Evaluate:**
     *   **Copy:** The user can copy the new prompt for use.
@@ -65,7 +65,7 @@ Instead of guessing what might work, you can use Promptly to:
 *   **Language**: Python
 *   **GUI Framework**: `PyQt5`
 *   **AI/LLM Backend**: `ollama` for local model hosting.
-    *   **Models Used**: `qwen2.5:7b` (or similar high-quality instruction-tuned model)
+    *   **Models Used**: `phi4:14b` (or similar high-quality instruction-tuned model)
 *   **UI Styling**: Custom stylesheets for a modern, dark theme.
 *   **Data Persistence**: `JSON` for storing prompt history.
 
@@ -81,7 +81,7 @@ Follow these instructions to get Promptly up and running on your machine.
 2.  **Ollama**: You must have [Ollama](https://ollama.com/) installed and running on your system.
 3.  **Required LLM Model**: Pull the model used by the application from the Ollama library.
     ```sh
-    ollama pull qwen2.5:7b
+    ollama pull phi4:14b
     ```
     *(You can modify the model name in the source code if you wish to use another model like `llama3` or `mistral`)*
 
