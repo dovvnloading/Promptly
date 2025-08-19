@@ -110,3 +110,6 @@ Follow these instructions to get Promptly up and running on your machine.
     ```sh
     python Promptly.py
     ```
+---
+
+Icon source and credits: https://thenounproject.com/icons/?utm_source=google&utm_medium=cpc&utm_campaign=search&utm_term=icons&utm_content=us&gad_source=1&gclid=CjwKCAiAyJS7BhBiEiwAyS9uNdr6pabORn14_xXAOSdMIqD__szmpDtLwiOFG4gnyI8mn9q_JwZJBxoCnRYQAvD_BwE
