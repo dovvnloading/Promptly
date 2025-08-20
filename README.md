@@ -8,8 +8,8 @@
 
 This tool acts as a dedicated assistant, ensuring your prompts are clear, specific, and actionable, ultimately leading to better and more consistent AI-generated results.
 
+<img width="1282" height="781" alt="Screenshot 2025-08-20 073617" src="https://github.com/user-attachments/assets/c72b79ff-cd42-423a-a315-9c60a8c71984" />
 
-<img width="1170" height="707" alt="Screenshot 2025-08-19 091434" src="https://github.com/user-attachments/assets/8b5e301d-05d8-47d5-946d-296cd5bba673" />
 
 ## About The Project
 
