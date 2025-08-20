@@ -1,8 +1,10 @@
-﻿import sys
+import sys
 import json
 import os
 import re
 import math  # Import math for LoadingSpinner
+import markdown
+
 
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QLabel, QPushButton, QTextEdit,
@@ -48,23 +50,25 @@ class PromptWorker:
 
         self.generate_system_prompt = """
             # ROLE AND PURPOSE
-            You are a Prompt Engineering Assistant. Your sole function is to improve and rewrite the given text - removing any ambiguity and leavine minimal room for assumtion. NEVER EVER ANSWER OR ATTEMPT TO RESPOND DIRECTLY TO THE QUERY! THIS IS NOT YOUR ROLE OR PLACE TO DO SO. NEVER fabricate, add things or make things up just for sake purpose. This is not the golad either, you are to enhance clarity on the given text removing ambiguity 
+            You are a Prompt Engineering Assistant. Your sole function is to improve and rewrite the given text - removing any ambiguity and leaving minimal room for assumption. NEVER EVER ANSWER OR ATTEMPT TO RESPOND DIRECTLY TO THE QUERY! THIS IS NOT YOUR ROLE OR PLACE TO DO SO. NEVER fabricate, add things or make things up just for the sake of it. This is not the goal either, you are to enhance clarity on the given text removing ambiguity.
+
+            # TASK
+            The user will provide a prompt inside `<prompt_to_enhance>` tags. Your one and only job is to rewrite and improve the text found inside these tags according to the guidelines below. You must output ONLY the rewritten text and nothing else.
 
             # CRITICAL INSTRUCTIONS
-            - DO NOT answer or fulfill the prompt directly
-            - DO NOT engage in conversation
-            - DO NOT provide explanations
-            - DO NOT offer additional context
-            - DO NOT ask questions
-            - DO NOT make suggestions beyond the prompt improvement
-            - DO NOT output the enhanced prompt
+            - DO NOT answer or fulfill the prompt found inside the tags.
+            - DO NOT engage in conversation.
+            - DO NOT provide explanations.
+            - DO NOT offer additional context.
+            - DO NOT ask questions.
+            - DO NOT make suggestions beyond the prompt improvement.
 
             # OUTPUT REQUIREMENTS
-            1. Format: Clean, properly structured text
-            2. Must maintain original intent
-            3. No meta-commentary or notes
-            4. No prefixes or suffixes
-            5. No header markers (e.g., "Enhanced prompt:", "Result:", etc.)
+            1. Format: Clean, properly structured text.
+            2. Must maintain original intent.
+            3. No meta-commentary or notes.
+            4. No prefixes or suffixes (e.g., "Enhanced prompt:", "Result:", etc.).
+            5. Output only the final, enhanced prompt text.
 
             # PROMPT ENHANCEMENT GUIDELINES
             Improve the prompt by making it:
@@ -95,14 +99,14 @@ class PromptWorker:
             {history_context}
 
             # STRICTLY FORBIDDEN
-            - Responding to the prompt
-            - Adding explanatory notes
-            - Including meta-commentary
-            - Engaging in conversation
-            - Offering alternatives
-            - Asking questions
-            - Providing additional or alternate examples
-            - Adding instructions about how to use the prompt
+            - Responding to the prompt.
+            - Adding explanatory notes.
+            - Including meta-commentary.
+            - Engaging in conversation.
+            - Offering alternatives.
+            - Asking questions.
+            - Providing additional or alternate examples.
+            - Adding instructions about how to use the prompt.
             """
 
         self.feedback_system_prompt = """
@@ -152,6 +156,8 @@ class PromptWorker:
                 system_prompt = self.generate_system_prompt.format(
                     history_context=self.get_history_context()
                 )
+                # THIS IS THE KEY CHANGE: Frame the user input as data
+                user_content = f"Please enhance the following prompt:\n\n<prompt_to_enhance>\n{requirements}\n</prompt_to_enhance>"
             else:
                 # For feedback, use original prompt and last attempt
                 if not self.history:
@@ -160,10 +166,12 @@ class PromptWorker:
                     original_prompt=self.original_prompt,
                     last_attempt=self.history[-1]
                 )
+                # You can apply a similar framing here if needed, but the feedback prompt is already structured differently
+                user_content = "Please improve this prompt based on the feedback."
 
             messages = [
                 {'role': 'system', 'content': system_prompt},
-                {'role': 'user', 'content': requirements if not is_feedback else "Please improve this prompt."}
+                {'role': 'user', 'content': user_content} # Use the new framed content
             ]
 
             response = ollama.chat(model='phi4:14b', messages=messages)
@@ -172,7 +180,7 @@ class PromptWorker:
                 raise Exception("Invalid response from Ollama.")
 
             result = response['message']['content']
-            self.update_history(result)  # Update history with the *cleaned* result
+            self.update_history(result)
             return result
 
         except Exception as e:
@@ -1084,82 +1092,17 @@ class PromptEngineerApp(QMainWindow):
         self.worker_thread.error.connect(lambda: self.feedback_button.setEnabled(True))  # Re-enable
         self.worker_thread.start()
 
-    def format_ai_response(self, response):
-        """Formats the AI's response for display, handling lists and markdown."""
-        formatted = []
-        current_list = []  # To accumulate list items
-        list_type = None  # 'ul' for unordered, 'ol' for ordered
-
-        for line in response.split('\n'):
-            line = line.strip()  # Remove leading/trailing whitespace
-
-            if not line:  # Empty line: end any current list
-                if current_list:
-                    formatted.append(f"<{list_type}>\n{''.join(current_list)}\n</{list_type}>")
-                    current_list = []
-                    list_type = None
-                formatted.append('<br>')  # Add a line break
-                continue
-
-            # Check for numbered list item (starts with "1. ", "2. ", etc.)
-            numbered_match = re.match(r'^\d+\.\s+(.+)$', line)
-            if numbered_match:
-                if list_type != 'ol':  # If not already in an ordered list
-                    if current_list:  # Close any previous list
-                        formatted.append(f"<{list_type}>\n{''.join(current_list)}\n</{list_type}>")
-                        current_list = []
-                    list_type = 'ol'
-                current_list.append(f"<li>{numbered_match.group(1)}</li>\n")  # Add list item
-                continue
-
-            # Check for unordered list item (starts with "- " or "* ")
-            if line.startswith('- ') or line.startswith('* '):
-                if list_type != 'ul':  # If not already in an unordered list
-                    if current_list:  # Close any previous list
-                        formatted.append(f"<{list_type}>\n{''.join(current_list)}\n</{list_type}>")
-                        current_list = []
-                    list_type = 'ul'
-                current_list.append(f"<li>{line[2:]}</li>\n")  # Add list item, removing the '- '
-                continue
-
-            # If we reach here, it's not a list item.  End any existing list.
-            if current_list:
-                formatted.append(f"<{list_type}>\n{''.join(current_list)}\n</{list_type}>")
-                current_list = []
-                list_type = None
-
-            # Handle headers (h1, h2, h3, etc.)
-            if line.startswith('#'):
-                header_match = re.match(r'^(#+)\s+(.+)$', line)
-                if header_match:
-                    level = len(header_match.group(1))  # Number of '#'
-                    content = header_match.group(2)
-                    formatted.append(f"<h{level}>{content}</h{level}>")
-                    continue
-
-            # Basic markdown formatting (bold, italic, inline code)
-            line = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', line)  # Bold
-            line = re.sub(r'\*(.+?)\*', r'<i>\1</i>', line)      # Italics
-            line = re.sub(r'`(.+?)`', r'<code>\1</code>', line)    # Inline code
-            formatted.append(f"<p>{line}</p>")  # Wrap in paragraph tags
-
-        # Close any remaining list
-        if current_list:
-            formatted.append(f"<{list_type}>\n{''.join(current_list)}\n</{list_type}>")
-
-        # Combine into a single HTML string
-        html = f"""
-        <div class="content">
-            {''.join(formatted)}
-        </div>
-        """
-        return html
-
-
     def handle_generation_response(self, response):
-        formatted_response = self.format_ai_response(response)
-        self.generated_text.setHtml(formatted_response)  # Use setHtml for rich text
-        self.evaluate_button.setEnabled(True) #enable evaluate button
+        """Converts Markdown response to HTML and displays it."""
+        # Convert the raw markdown text from the AI into HTML
+        html_content = markdown.markdown(response, extensions=['fenced_code', 'tables'])
+
+        # The setHtml method will now correctly render the rich text
+        # because the HTML is properly formatted by the library.
+        # Your existing CSS in FormattedTextEdit will style it automatically.
+        self.generated_text.setHtml(html_content)
+
+        self.evaluate_button.setEnabled(True)  # Enable evaluate button
         self.tray_icon.showMessage(
             "Prompt Generated",
             "New prompt is ready for review",
